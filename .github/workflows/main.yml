@@ -3,7 +3,7 @@ name: CI/CD ECR Pipeline
 on:
   push:
     branches:
-      -[span_4](start_span)[span_5](start_span)deploy #El pipeline se activa solo en esta rama.
+      - deploy #El pipeline se activa solo en esta rama.
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -32,9 +32,12 @@ jobs:
           ECR_REPOSITORY: innova-venta
           IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./back-Ventas_SpringBoot/Springboot-API-REST
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG./front_despacho
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
+          
       #4. Desplegar la instancia EC2
       - name: Desplegar en EC2
         uses: appleboy/ssh-action@v1.0.3
