@@ -3,32 +3,33 @@ name: CI/CD ECR Pipeline
 on:
   push:
     branches:
-      - deploy #El pipeline se activa solo en esta rama.
+      - deploy # El pipeline se activa solo en esta rama
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    # Se agregan 2 lineas de código ya que github envió una alerta de deprecado de node 20
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
 
-      #1. Autenticarse con AWS usando Secrets
+      # 1. Autenticarse con AWS usando Secrets
       - name: Configurar credenciales de AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} #Obligatorio para academy
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} # Obligatorio para Academy
           aws-region: us-east-1
 
-      #2.Iniciar sesión en ECR
+      # 2. Iniciar sesión en ECR
       - name: Login en Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 3. Construir, etiquetar y subir las imágenes a ECR
+      # 3. Construir, etiquetar y subir Venta
       - name: Construir y subir Venta
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -38,53 +39,92 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./back-Ventas_SpringBoot/Springboot-API-REST
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      # 4. Construir, etiquetar y subir Despacho
       - name: Construir y subir Despacho
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: innova-despacho 
+          ECR_REPOSITORY: innova-despacho
           IMAGE_TAG: latest
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      # 5. Construir, etiquetar y subir Frontend
       - name: Construir y subir Frontend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: innovatech-frontend 
+          ECR_REPOSITORY: innovatech-frontend
           IMAGE_TAG: latest
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./front_despacho
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          
-      # 4. Copiar el archivo compose al Backend (¡NUEVO PASO!)
-      - name: Enviar docker-compose a EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_BACKEND_IP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          proxy_host: ${{ secrets.EC2_FRONTEND_IP }}
-          proxy_username: ec2-user
-          proxy_key: ${{ secrets.EC2_SSH_KEY }}
-          source: "Docker-compose.yaml"
-          target: "/home/ec2-user/"
 
-      # 5. Desplegar en la instancia EC2 Backend
+      # 6. Desplegar en la instancia EC2 Backend (Privada) usando proxy
       - name: Desplegar en EC2 Backend
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_BACKEND_IP }}
+          host: ${{ secrets.EC2_BACKEND_IP }} # IP Privada (ej: 10.0.0.203)
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          proxy_host: ${{ secrets.EC2_FRONTEND_IP }}
+          proxy_host: ${{ secrets.EC2_FRONTEND_IP }} # IP Pública del front como puente
           proxy_username: ec2-user
           proxy_key: ${{ secrets.EC2_SSH_KEY }}
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
           script: |
-            mkdir -p /home/ec2-user/backend-innovatech
-            cd /home/ec2-user/backend-innovatech
+            cd /home/ec2-user/
             
-            # 1. Crear el archivo .env 
+            # 0. Escribir el Docker-compose directamente en la máquina (Backend)
+            cat << 'EOF' > Docker-compose.yaml
+            version: '3.8'
+            services:
+              mysql:
+                image: mysql:8.0
+                container_name: database-mysql
+                restart: always
+                environment:
+                  MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+                  MYSQL_DATABASE: ${MYSQL_DATABASE}
+                  MYSQL_USER: ${MYSQL_APP_USER}
+                  MYSQL_PASSWORD: ${MYSQL_APP_PASSWORD}
+                ports:
+                  - "3306:3306"
+                volumes:
+                  - database_data:/var/lib/mysql
+
+              backend-despacho:
+                image: ${{ steps.login-ecr.outputs.registry }}/innova-despacho:latest
+                container_name: backend-despacho
+                restart: always
+                ports:
+                  - "8081:8081"
+                environment:
+                  DB_ENDPOINT: mysql
+                  DB_PORT: 3306
+                  DB_NAME: ${MYSQL_DATABASE}
+                  DB_USERNAME: ${MYSQL_APP_USER}
+                  DB_PASSWORD: ${MYSQL_APP_PASSWORD}
+                depends_on:
+                  - mysql
+
+              backend-venta:
+                image: ${{ steps.login-ecr.outputs.registry }}/innova-venta:latest
+                container_name: backend-venta
+                restart: always
+                ports:
+                  - "8080:8080"
+                environment:
+                  DB_ENDPOINT: mysql
+                  DB_PORT: 3306
+                  DB_NAME: ${MYSQL_DATABASE}
+                  DB_USERNAME: ${MYSQL_APP_USER}
+                  DB_PASSWORD: ${MYSQL_APP_PASSWORD}
+                depends_on:
+                  - mysql
+            volumes:
+              database_data:
+            EOF
+            
+            # 1. Crear el archivo .env con las credenciales de la BD
             echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" > .env
             echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
             echo "MYSQL_APP_USER=${{ secrets.MYSQL_APP_USER }}" >> .env
@@ -93,25 +133,36 @@ jobs:
             # 2. Autenticarse en AWS ECR
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             
-            # 3. Descargar imágenes y levantar contenedores forzando la lectura del archivo
+            # 3. Descargar imágenes y levantar contenedores
             docker-compose -f Docker-compose.yaml pull
             docker-compose -f Docker-compose.yaml up -d
-      
-      # 6. Desplegar el Frontend en la EC2 Pública
-      - name: Enviar y Desplegar Frontend
+
+      # 7. Desplegar en la instancia EC2 Frontend (Pública)
+      - name: Desplegar en EC2 Frontend
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_FRONTEND_IP }}  # IP Pública del Frontend
+          host: ${{ secrets.EC2_FRONTEND_IP }} # IP Pública
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
           script: |
-            mkdir -p /home/ec2-user/frontend-innovatech
-            cd /home/ec2-user/frontend-innovatech
+            cd /home/ec2-user/
             
-            # Nota: Para este paso tendrías que usar scp-action antes para mandarle el docker-compose-front.yaml, 
-            # o crearlo al vuelo con un echo como hicimos con el .env, lo que te sea más cómodo.
+            # 0. Escribir el Docker-compose directamente en la máquina (Frontend)
+            cat << 'EOF' > docker-compose-front.yaml
+            version: '3.8'
+            services:
+              frontend-innovatech:
+                image: ${{ steps.login-ecr.outputs.registry }}/innovatech-frontend:latest
+                container_name: cont_front
+                restart: always
+                ports:
+                  - "80:80"
+            EOF
             
+            # 1. Autenticarse en AWS ECR
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            
+            # 2. Descargar imagen y levantar contenedor
             docker-compose -f docker-compose-front.yaml pull
-                  docker-compose -f docker-compose-front.yaml up -d
+            docker-compose -f docker-compose-front.yaml up -d
