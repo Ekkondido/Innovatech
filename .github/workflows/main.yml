@@ -1,0 +1,55 @@
+name: CI/CD ECR Pipeline
+
+on:
+  push:
+    branches:
+      -[span_4](start_span)[span_5](start_span)deploy #El pipeline se activa solo en esta rama.
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      #1. Autenticarse con AWS usando Secrets
+      - name: Configurar credenciales de AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-acces-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }} #Obligatorio para academy
+          aws-region: us-east-1
+
+      #2.Iniciar sesión en ECR
+      - name: Login en Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      #3. Construir, etiquetar y subir la imagen a ECR
+      - name: Construir y subir imagen
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: innova-venta
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      #4. Desplegar la instancia EC2
+      - name: Desplegar en EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          #Se pasan las credenciales temporales para que la EC2 pueda descargar la imagen
+          envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
+          script: |
+            #Ir a la carpeta del proyecto
+            cd /home/ec2-user/backend-innovatech
+  
+            #Iniciar sesión en ECR desde la EC2 para poder descargar la imagen
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 484668757531.dkr.ecr.us-east-1.amazonaws.com/innovatech-frontend
+            Descargar la imagen nueva y levantar el contenedor
+            docker-compose pull
+            docker-compose up -d
