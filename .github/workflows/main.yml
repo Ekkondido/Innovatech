@@ -158,11 +158,18 @@ jobs:
                 restart: always
                 ports:
                   - "80:80"
+                environment:
+                  # Le pasamos la variable al contenedor
+                  - BACKEND_IP=${BACKEND_IP}
             EOF
             
-            # 1. Autenticarse en AWS ECR
+            # 1. Crear un archivo .env con el valor de la IP Privada del Backend
+            # (Usamos el secreto donde guardaste la IP que empieza con 10.x.x.x)
+            echo "BACKEND_IP=${{ secrets.EC2_BACKEND_IP }}" > .env
+            
+            # 2. Autenticarse en AWS ECR
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             
-            # 2. Descargar imagen y levantar contenedor
+            # 3. Descargar imagen y levantar contenedor
             docker-compose -f docker-compose-front.yaml pull
             docker-compose -f docker-compose-front.yaml up -d
