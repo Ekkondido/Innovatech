@@ -66,8 +66,8 @@ jobs:
           proxy_host: 34.226.123.180
           proxy_username: ec2-user
           proxy_key: ${{ secrets.EC2_SSH_KEY }}
-          source: "Docker-compose.yaml" # CUIDADO: Escríbelo exactamente igual a como se llama en tu GitHub
-          target: "/home/ec2-user/backend-innovatech"
+          source: "Docker-compose.yaml"
+          target: "/home/ec2-user/"
 
       # 5. Desplegar en la instancia EC2 Backend
       - name: Desplegar en EC2 Backend
@@ -81,6 +81,7 @@ jobs:
           proxy_key: ${{ secrets.EC2_SSH_KEY }}
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
           script: |
+            mkdir -p /home/ec2-user/backend-innovatech
             cd /home/ec2-user/backend-innovatech
             
             # 1. Crear el archivo .env 
