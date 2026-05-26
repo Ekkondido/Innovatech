@@ -16,9 +16,8 @@ services:
       - database_data:/var/lib/mysql
 
   backend-despacho:
-    build:
-      context: ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
-      dockerfile: Dockerfile
+    # SE ELIMINÓ EL BUILD Y SE REEMPLAZÓ POR LA IMAGEN DE ECR
+    image: 484668757531.dkr.ecr.us-east-1.amazonaws.com/innova-despacho:latest
     container_name: backend-despacho
     restart: always
     ports:
@@ -33,9 +32,8 @@ services:
       - mysql
 
   backend-venta:
-    build:
-      context: ./back-Ventas_SpringBoot/Springboot-API-REST
-      dockerfile: Dockerfile
+    # SE ELIMINÓ EL BUILD Y SE REEMPLAZÓ POR LA IMAGEN DE ECR
+    image: 484668757531.dkr.ecr.us-east-1.amazonaws.com/innova-venta:latest
     container_name: backend-venta
     restart: always
     ports:
@@ -50,9 +48,8 @@ services:
       - mysql
 
   frontend-innovatech:
-    build:
-      context: ./front_despacho
-      dockerfile: Dockerfile
+    # SE ELIMINÓ EL BUILD Y SE REEMPLAZÓ POR LA IMAGEN DE ECR
+    image: 484668757531.dkr.ecr.us-east-1.amazonaws.com/innovatech-frontend:latest
     container_name: cont_front
     restart: always
     ports:
