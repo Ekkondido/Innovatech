@@ -63,7 +63,7 @@ jobs:
           host: ${{ secrets.EC2_BACKEND_IP }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          proxy_host: 34.226.123.180
+          proxy_host: ${{ secrets.EC2_FRONTEND_IP }}
           proxy_username: ec2-user
           proxy_key: ${{ secrets.EC2_SSH_KEY }}
           source: "Docker-compose.yaml"
@@ -76,7 +76,7 @@ jobs:
           host: ${{ secrets.EC2_BACKEND_IP }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          proxy_host: 34.226.123.180
+          proxy_host: ${{ secrets.EC2_FRONTEND_IP }}
           proxy_username: ec2-user
           proxy_key: ${{ secrets.EC2_SSH_KEY }}
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
@@ -101,7 +101,7 @@ jobs:
       - name: Enviar y Desplegar Frontend
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 34.226.123.180  # IP Pública del Frontend
+          host: ${{ secrets.EC2_FRONTEND_IP }}  # IP Pública del Frontend
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
