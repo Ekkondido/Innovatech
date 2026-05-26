@@ -83,9 +83,15 @@ jobs:
           script: |
             cd /home/ec2-user/backend-innovatech
             
-            # Autenticarse en AWS ECR
+            # 1. Crear el archivo .env 
+            echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" > .env
+            echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
+            echo "MYSQL_APP_USER=${{ secrets.MYSQL_APP_USER }}" >> .env
+            echo "MYSQL_APP_PASSWORD=${{ secrets.MYSQL_APP_PASSWORD }}" >> .env
+            
+            # 2. Autenticarse en AWS ECR
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             
-            # Descargar imágenes y levantar contenedores forzando la lectura del archivo con -f
+            # 3. Descargar imágenes y levantar contenedores forzando la lectura del archivo
             docker-compose -f Docker-compose.yaml pull
             docker-compose -f Docker-compose.yaml up -d
