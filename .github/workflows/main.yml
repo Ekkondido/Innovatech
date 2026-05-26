@@ -56,21 +56,23 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./front_despacho
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           
-      #4. Desplegar la instancia EC2
-      - name: Desplegar en EC2
+      # 4. Desplegar en la instancia EC2
+      - name: Desplegar en EC2 Backend
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
+          # 1. LA IP DE DESTINO (Tu Backend Privado)
+          host: ${{ secrets.EC2_BACKEND_IP }} # Debes crear este secreto con la IP Privada del backend (empieza con 10. o 172.)
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          #Se pasan las credenciales temporales para que la EC2 pueda descargar la imagen
+          
+          # 2. EL PUENTE (Tu Frontend Público)
+          proxy_host: 34.226.123.180 # La IP pública que sale en tu segunda foto
+          proxy_username: ec2-user
+          proxy_key: ${{ secrets.EC2_SSH_KEY }} # Usa la misma llave .pem
+          
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
           script: |
-            #Ir a la carpeta del proyecto
             cd /home/ec2-user/backend-innovatech
-  
-            #Iniciar sesión en ECR desde la EC2 para poder descargar la imagen
-            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 484668757531.dkr.ecr.us-east-1.amazonaws.com/innovatech-frontend
-            Descargar la imagen nueva y levantar el contenedor
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             docker-compose pull
             docker-compose up -d
