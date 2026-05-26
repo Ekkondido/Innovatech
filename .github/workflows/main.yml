@@ -56,23 +56,36 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./front_despacho
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           
-      # 4. Desplegar en la instancia EC2
+      # 4. Copiar el archivo compose al Backend (¡NUEVO PASO!)
+      - name: Enviar docker-compose a EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_BACKEND_IP }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          proxy_host: 34.226.123.180
+          proxy_username: ec2-user
+          proxy_key: ${{ secrets.EC2_SSH_KEY }}
+          source: "Docker-compose.yaml" # CUIDADO: Escríbelo exactamente igual a como se llama en tu GitHub
+          target: "/home/ec2-user/backend-innovatech"
+
+      # 5. Desplegar en la instancia EC2 Backend
       - name: Desplegar en EC2 Backend
         uses: appleboy/ssh-action@v1.0.3
         with:
-          # 1. LA IP DE DESTINO (Tu Backend Privado)
-          host: ${{ secrets.EC2_BACKEND_IP }} # Debes crear este secreto con la IP Privada del backend (empieza con 10. o 172.)
+          host: ${{ secrets.EC2_BACKEND_IP }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
-          
-          # 2. EL PUENTE (Tu Frontend Público)
-          proxy_host: 34.226.123.180 # La IP pública que sale en tu segunda foto
+          proxy_host: 34.226.123.180
           proxy_username: ec2-user
-          proxy_key: ${{ secrets.EC2_SSH_KEY }} # Usa la misma llave .pem
-          
+          proxy_key: ${{ secrets.EC2_SSH_KEY }}
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
           script: |
             cd /home/ec2-user/backend-innovatech
+            
+            # Autenticarse en AWS ECR
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-            docker-compose pull
-            docker-compose up -d
+            
+            # Descargar imágenes y levantar contenedores forzando la lectura del archivo con -f
+            docker-compose -f Docker-compose.yaml pull
+            docker-compose -f Docker-compose.yaml up -d
