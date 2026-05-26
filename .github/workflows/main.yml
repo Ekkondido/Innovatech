@@ -7,6 +7,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Se agregan 2 lineas de código ya que github envió una alerta de deprecado de node 20
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
