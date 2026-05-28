@@ -18,5 +18,7 @@ COPY --from=build /app/target/*.jar app.jar
 
 EXPOSE 8080 
 
-ENTRYPOINT [ "java", "-jar", "app.jar" ]
+# Restringir privilegios del contenedor a usuario no-root
+USER guest
 
+ENTRYPOINT [ "java", "-jar", "app.jar" ]
