@@ -154,16 +154,16 @@ jobs:
             
             # 0. Escribir el Docker-compose directamente en la máquina (Frontend)
             cat << 'EOF' > docker-compose-front.yaml
-            version: '3.8'
+            [cite_start]version: '3.8' [cite: 362]
             services:
               frontend-innovatech:
-                image: ${{ steps.login-ecr.outputs.registry }}/innovatech-frontend:latest
-                container_name: cont_front
-                restart: always
+                [cite_start]image: ${{ steps.login-ecr.outputs.registry }}/innovatech-frontend:latest [cite: 363]
+                [cite_start]container_name: cont_front [cite: 363]
+                [cite_start]restart: always [cite: 363]
                 ports:
-                  - "80:8080"  # 🟢 CAMBIO CRÍTICO: Mapea el puerto 80 de la EC2 al 8080 interno de Nginx
+                  - "80:8080"  # Conecta el tráfico externo HTTP al puerto no-root interno
                 environment:
-                  - BACKEND_IP=${BACKEND_IP}
+                  - [cite_start]BACKEND_IP=${BACKEND_IP} [cite: 364]
             EOF
             
             # 1. Crear un archivo .env con el valor de la IP Privada del Backend
