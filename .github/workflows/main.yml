@@ -161,7 +161,7 @@ jobs:
                 container_name: cont_front
                 restart: always
                 ports:
-                  - "80:80"
+                  - "80:8080"  # 🟢 CAMBIO CRÍTICO: Mapea el puerto 80 de la EC2 al 8080 interno de Nginx
                 environment:
                   - BACKEND_IP=${BACKEND_IP}
             EOF
