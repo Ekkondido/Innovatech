@@ -161,7 +161,7 @@ jobs:
                 container_name: cont_front
                 restart: always
                 ports:
-                  - "80:8080"
+                  - "80:80"
                 environment:
                   - BACKEND_IP=${BACKEND_IP}
             EOF
