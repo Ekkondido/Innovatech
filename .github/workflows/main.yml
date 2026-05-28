@@ -149,29 +149,29 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION, ECR_REGISTRY
-        script: |
-          cd /home/ec2-user/
-          
-          # 0. Escribir el Docker-compose directamente en la máquina (Frontend)
-          cat << 'EOF' > docker-compose-front.yaml
-          version: '3.8'
-          services:
-            frontend-innovatech:
-              image: ${{ steps.login-ecr.outputs.registry }}/innovatech-frontend:latest
-              container_name: cont_front
-              restart: always
-              ports:
-                - "80:8080"
-              environment:
-                - BACKEND_IP=${BACKEND_IP}
-          EOF
-          
-          # 1. Crear un archivo .env con el valor de la IP Privada del Backend
-          echo "BACKEND_IP=${{ secrets.EC2_BACKEND_IP }}" > .env
-          
-          # 2. Autenticarse en AWS ECR
-          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-          
-          # 3. Descargar imagen y levantar contenedor
-          docker-compose -f docker-compose-front.yaml pull
-          docker-compose -f docker-compose-front.yaml up -d
+          script: |
+            cd /home/ec2-user/
+            
+            # 0. Escribir el Docker-compose directamente en la máquina (Frontend)
+            cat << 'EOF' > docker-compose-front.yaml
+            version: '3.8'
+            services:
+              frontend-innovatech:
+                image: ${{ steps.login-ecr.outputs.registry }}/innovatech-frontend:latest
+                container_name: cont_front
+                restart: always
+                ports:
+                  - "80:8080"
+                environment:
+                  - BACKEND_IP=${BACKEND_IP}
+            EOF
+            
+            # 1. Crear un archivo .env con el valor de la IP Privada del Backend
+            echo "BACKEND_IP=${{ secrets.EC2_BACKEND_IP }}" > .env
+            
+            # 2. Autenticarse en AWS ECR
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            
+            # 3. Descargar imagen y levantar contenedor
+            docker-compose -f docker-compose-front.yaml pull
+            docker-compose -f docker-compose-front.yaml up -d
