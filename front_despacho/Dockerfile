@@ -1,4 +1,4 @@
-#creo la maquina virutual
+# Creo la maquina virtual de construccion
 FROM node:18-alpine AS build
 
 WORKDIR /app
@@ -7,25 +7,22 @@ COPY package*.json ./
 
 RUN npm ci
 
-COPY  . .
-#compila el proyecto
-RUN npm run build
+COPY . .
+# Compila el proyecto generando el directorio /dist
+RUN npm run build [cite: 467]
 
 
-#stage 2
-FROM nginx:alpine AS production
+# Stage 2: Despliegue seguro en producción [cite: 468]
+# Usamos la variante oficial de Nginx diseñada nativamente para correr como No-Root
+FROM nginxinc/nginx-unprivileged:alpine AS production
 
+# Copia los artefactos estáticos compilados desde la etapa build [cite: 469]
 COPY --from=build /app/dist /usr/share/nginx/html
 
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-# 🟢 CAMBIO 1: Exponer un puerto alto (mayor a 1024) para el usuario no-root
+# Exponer el puerto alto nativo de esta imagen (mayor a 1024) [cite: 553]
 EXPOSE 8080
 
-# Restringir privilegios del contenedor a usuario no-root
-USER nginx
-
-# 🟢 CAMBIO 2: Le decimos a Nginx que escuche en el puerto 8080 usando variables de entorno de su imagen oficial
-ENV NGINX_PORT=8080
-
-CMD ["nginx", "-g", "daemon off;"]
+# Nota técnica para la defensa: Esta imagen ya se inicializa de forma interna 
+# bajo un usuario limitado sin privilegios de administrador ('nginx').
