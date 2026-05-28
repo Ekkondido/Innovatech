@@ -17,5 +17,7 @@ COPY --from=build /app/target/*.jar app.jar
 #PUERTO DONDE SE UBICA, no es el mismo del front pero esto lo veremos en DOCKER-COMPOSE
 EXPOSE 8080 
 
-ENTRYPOINT [ "java", "-jar", "app.jar" ]
+# Restringir privilegios del contenedor a usuario no-root
+USER guest
 
+ENTRYPOINT [ "java", "-jar", "app.jar" ]
