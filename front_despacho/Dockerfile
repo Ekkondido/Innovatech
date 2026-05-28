@@ -1,4 +1,3 @@
-
 #creo la maquina virutual
 FROM node:18-alpine AS build
 
@@ -22,5 +21,7 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Restringir privilegios del contenedor a usuario no-root
+USER nginx
 
+CMD ["nginx", "-g", "daemon off;"]
